@@ -1,1 +1,0 @@
-prototype chattool written in go that is uses Diffie–Hellman key exchange and after that AES256 encryption for messanges
