@@ -4,7 +4,9 @@ import(
 )
 
 
-
+// message interfaces are send to networking
+// can be en/decrypted with key.encrypt(message)
+// validate is reserved for future temper checking
 type message interface{
   len() int
   to_string() string

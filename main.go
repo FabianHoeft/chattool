@@ -5,6 +5,7 @@ import(
 )
 
 func main() {
+
   LAN:=NewIntranet()
   A:=NewPerson()
   B:=NewPerson()
@@ -14,12 +15,11 @@ func main() {
   B.recieve()
   B.rename_friend("LAN0000000000000001","A")
   A.recieve()
-  A.chat("B","hi0")
+  A.chat("B","hi")
   B.recieve()
 
 
-
-  fmt.Println(A.chatlog["B"])
-  fmt.Println(B.chatlog["A"])
+  fmt.Println(A.show_chat("B",0))
+  fmt.Println(B.show_chat("A",0))
 
 }

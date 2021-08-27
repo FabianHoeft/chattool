@@ -5,10 +5,10 @@ import(
 )
 
 
-func rightrotate(i uint32,shift int) uint32  {
-  return (i<<shift)|(i>>(32-shift))
-}
 
+// SHA256 hash function
+// main use is generating a 256 bit Key for AES from the 2048 bit shared key from the keyexchange
+// though this use is overkill other uses might arise
 func SHA256(message string) [8]uint32 {
   h0 := uint32(0x6a09e667)
   h1 := uint32(0xbb67ae85)
@@ -66,6 +66,9 @@ func SHA256(message string) [8]uint32 {
   return [8]uint32{h0,h1,h2,h3,h4,h5,h6,h7}
 }
 
+func rightrotate(i uint32,shift int) uint32  {
+  return (i<<shift)|(i>>(32-shift))
+}
 
 func messageprep(bytes string) [][16]uint32 {
   bytes=bytes+string(0xA0)

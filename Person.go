@@ -6,6 +6,19 @@ import(
 )
 
 
+
+// this is the main user instance
+// all user accsesible functions are memberfunctions of person
+type person struct{
+  friends map[string]friend
+  iptofriend map[string]map[ip]string
+  chatlog map[string][]string
+  log []string
+  Networks map[string]Networkstore
+
+}
+
+// stores all information tecnical information about befriended persons
 type friend struct{
   name string
   Network string
@@ -25,14 +38,6 @@ func NewPerson() person  {
   return person{friends,iptofriend,chatlog,log,Networks}
 }
 
-type person struct{
-  friends map[string]friend
-  iptofriend map[string]map[ip]string
-  chatlog map[string][]string
-  log []string
-  Networks map[string]Networkstore
-
-}
 
 func (P person)Log(m string)  {
   P.log=append(P.log,time.Now().Format(time.RFC850)+" : "+m)
@@ -186,4 +191,51 @@ func (P person)recieve()  {
       }
     }
   }
+}
+
+func (P person)show_chat(ident string, options interface{}) string  {
+  _,ok:=P.friends[ident]
+	var out string
+  if ok {
+		switch op:=options.(type) {
+		case [2]int :
+			start:=op[0]
+			if op[0]>0 {
+				if op[0]>=len(P.chatlog[ident]) {
+					start=len(P.chatlog[ident])-1
+				}
+			} else { // op is negative here
+				if op[0]>=-len(P.chatlog[ident]) {
+					start=len(P.chatlog[ident])+op[0]
+				} else {
+					start=0
+				}
+			}
+			end:=op[1]
+			if op[1]>0 {
+				if op[0]>=len(P.chatlog[ident]) {
+					start=len(P.chatlog[ident])-1
+				}
+			} else { // op is negative here
+				if op[0]>=-len(P.chatlog[ident]) {
+					start=len(P.chatlog[ident])+op[0]
+				} else {
+					start=0
+				}
+			}
+			if end< start {
+				end=start
+			}
+			for _,message := range P.chatlog[ident][start:end] {
+				out=out+"\n"+message
+			}
+		default:
+			for _,message := range P.chatlog[ident] {
+				out=out+"\n"+message
+			}
+		}
+  } else {
+    P.Log("invalid request to chat with: "+ ident)
+  }
+	return out
 }

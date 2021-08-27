@@ -5,7 +5,7 @@ import(
 )
 
 
-
+// variable in Galois field of 2^8 that is used by AES
 type GF256 struct {
 	i uint8
 }
@@ -286,6 +286,10 @@ func to_string(bytes [][4][4]GF256)  string {
   return string(out)
 }
 
+
+
+// main de/encryption function
+// options is for choosing en or decrypt and in future possibly multicore support
 func AES256( message string , key interface{}, options interface{} ) string {
   var K [8]uint32
   switch  T:=key.(type) {
@@ -329,13 +333,3 @@ func AES256( message string , key interface{}, options interface{} ) string {
   return out
 
 }
-
-// func main() {
-//   t:="abcdefghijklmnopqrstuvxyz"
-//   key:=[]uint32{0,0,0,0,0,0,0,0}
-//   cipher:=AES256(t,key,0)
-//   fmt.Println(cipher)
-//   decrypted:=AES256(cipher,key,1)
-//   fmt.Println(decrypted)
-//
-// }

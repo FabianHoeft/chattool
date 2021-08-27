@@ -3,42 +3,56 @@ package main
 import(
 )
 
+// Networks provide acess to other users through LAN etc
+// currently omessages are just passed along
+// Network requires a password/token for accsess to safly allow multiple persons use the same network
+// without identitytheft and to avoid impersination
+
+type Network interface{
+  send(ip,ip,message,password)
+  recieve(ip,password) map[ip][]message
+  leave(ip,password)
+  join() Networkstore   //netpointer of the return value should always be a pointer to the network
+}
+
+
+// stores Networks for the users
+//provides send and recieve function without requiering passowrd
+type Networkstore struct{
+  myip ip
+  mypasswort password
+  netpointer Network
+}
+
+
+
 type ip struct{
   value [16]uint8
 }
-
 
 
 type password struct{
   value [8]uint32
 }
 
-type Networkstore struct{
-  sendf func(ip,ip,message,password)
-  recievef func(ip,password) map[ip][]message
-  leavef func(ip,password)
-  myip ip
-  mypasswort password
-}
 
 func (N Networkstore)send(ipr ip,m message) {
-  (N.sendf)(N.myip,ipr,m,N.mypasswort)
+  N.netpointer.send(N.myip,ipr,m,N.mypasswort)
 }
 
 func (N Networkstore)recieve() map[ip][]message {
-  return (N.recievef)(N.myip,N.mypasswort)
+  return (N.netpointer.recieve)(N.myip,N.mypasswort)
 }
 
 func (N Networkstore)leave() {
-  (N.leavef)(N.myip,N.mypasswort)
+  (N.netpointer.leave)(N.myip,N.mypasswort)
 }
 
 
-type Network interface{
-  send(ip,ip,message,password)
-  recieve(ip,password) map[ip][]message
-  leave(ip,password)
-  join() Networkstore
+type Intranet struct{
+  msg map[ip]map[ip][]message
+  member map[ip]password
+  count uint32
 }
 
 func NewIntranet()Intranet  {
@@ -48,20 +62,15 @@ func NewIntranet()Intranet  {
   return Intranet{msg,member,count}
 }
 
-type Intranet struct{
-  msg map[ip]map[ip][]message
-  member map[ip]password
-  count uint32
-}
 
-
-func (I Intranet)join()Networkstore {
+func (I Intranet)join() Networkstore {
   I.count=I.count+1
   newip:=ip{[16]uint8{0,0,0,0,0,0,0,0,0,0,0,0,uint8((I.count>>24)&0xFF),uint8((I.count>>16)&0xFF),uint8((I.count>>8)&0xFF),uint8(I.count&0xFF)}}
   newpassword:=password{SHA256(string(newip.value[:]))}
   I.member[newip]=newpassword
-  return Networkstore{I.send,I.recieve,I.leave,newip,newpassword}
+  return Networkstore{newip,newpassword,&I}
 }
+
 
 func (I Intranet)send(ips ip, ipr ip, M message, P password)  {
   Pchek,ok:=I.member[ips]
