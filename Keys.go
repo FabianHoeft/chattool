@@ -76,16 +76,8 @@ func New_pair(options interface{}) (mod,mod) {
     modu=big_primes(2048)
     root=big_primes(2040)
   }
-  var random,privkey,pubkey big.Int
-  for i := 0; i < modu.BitLen()/64+1; i++ {
-    rtemp1:=rand.Uint64()
-    rtemp2:=*big.NewInt(int64(rtemp1))
-    if rtemp1&(1<<63)==1 {
-      _=rtemp2.Lsh(&rtemp2,1)
-    }
-    _=random.Lsh(&random,64)
-    _=random.Add(&random,&rtemp2)
-  }
+  var privkey,pubkey big.Int
+  random:=Random_Int(2056)
   _,_=random.DivMod(&random,&modu,&privkey)
   _=pubkey.Exp(&root,&privkey,&modu)
   return mod{privkey,modu,root}, mod{pubkey,modu,root}

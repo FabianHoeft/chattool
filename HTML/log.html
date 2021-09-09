@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+
+.panel {
+  width: 200px;
+}
+.list-group {
+  overflow: auto;
+  height: 200px;
+}
+
+
+</style>
+</head>
+<body>
+
+<button onclick="location.href = '/main/log';" id="myButton"  >refresh</button>
+<button onclick="location.href = '/main/me';" id="myButton"  >back to main</button>
+
+
+<h1>logfile</h1>
+
+
+
+<div >
+  <div class="panel panel-primary">
+    <div class="panel-heading">
+      <span></span> Log
+      <ul class="list-group">
+        {{range .Log}}
+          <li>{{.Line}}</li>
+        {{end}}
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+
+</body>
+</html>

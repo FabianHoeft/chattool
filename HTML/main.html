@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+
+.panel {
+  width: 200px;
+}
+.list-group {
+  overflow: auto;
+  height: 200px;
+}
+
+
+</style>
+</head>
+<body>
+
+
+<button onclick="location.href = '/main/me';" id="myButton"  >refresh</button>
+<button onclick="location.href = '/main/log';" id="myButton"  >show log file</button>
+
+<h1>Main Chat page</h1>
+
+
+<div class="Friendlist">
+  <div >
+    <div >
+      <span></span> Friendlist
+      <ul class="list-group">
+        {{range .Friends}}
+          {{if .Unread}}
+            <li>
+              <button onclick="location.href = '/chat/{{.Name}}';" id="myButton"  >{{.Name}} : New message</button>
+            </li>
+          {{else}}
+            <li>
+              <button onclick="location.href = '/chat/{{.Name}}';" id="myButton"  >{{.Name}}</button>
+            </li>
+          {{end}}
+        {{end}}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div>
+  <button onclick="location.href = '/chat/add/new';" id="myButton"  >Newfriend</button>
+  <button onclick="location.href = '/recieve/text';" id="myButton"  >recieve</button>
+</div>
+<div>
+</div>
+<form  action="/main/shutdown" method="POST">
+  <div>
+    <textarea name="Confirm" rows="1" cols="6">false</textarea>
+  </div>
+  <div>
+    <input type="submit" value="shutdown">
+  </div>
+</form>
+
+</body>
+</html>

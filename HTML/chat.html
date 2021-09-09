@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+
+.panel {
+  width: 200px;
+}
+.list-group {
+  overflow: auto;
+  height: 200px;
+}
+
+
+</style>
+</head>
+<body>
+
+<button onclick="location.href = '/chat/{{.Name}}';" id="myButton"  >refresh</button>
+<button onclick="location.href = '/main/me';" id="myButton"  >back to main</button>
+
+
+<h1>Chat with {{.Name}}</h1>
+
+<form action="/chat/{{.Name}}/rename" method="POST">
+<div><textarea name="newname" rows="1" cols="20">{{.Name}}</textarea></div>
+<div><input type="submit" value="rename"></div>
+</form>
+
+
+
+<div class="online_users">
+  <div class="panel panel-primary">
+    <div class="panel-heading">
+      <span ></span> Chatlog:
+      <ul class="list-group">
+        {{range .Content}}
+          {{if .Done}}
+            <li class="done">{{.Title}}</li>
+          {{else}}
+            <li>{{.Title}}</li>
+          {{end}}
+        {{end}}
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+<form action="/chat/{{.Name}}/send"  method="POST">
+<div><textarea name="msg" rows="4" cols="80"></textarea></div>
+<div><button>send</button></div>
+</form>
+
+<form  action="/chat/{{.Name}}/remove" method="POST">
+  <div>
+    <textarea name="Confirm" rows="1" cols="6">false</textarea>
+  </div>
+  <div>
+    <input type="submit" value="remove as friend">
+  </div>
+</form>
+
+</body>
+</html>

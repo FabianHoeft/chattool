@@ -2,7 +2,8 @@ package main
 
 import(
 	"time"
-  "strconv"
+	"regexp"
+	"net/http"
 )
 
 
@@ -11,10 +12,14 @@ import(
 // all user accsesible functions are memberfunctions of person
 type person struct{
   friends map[string]friend
-  iptofriend map[string]map[ip]string
+  iptofriend map[string]map[string]string
+	iptofriend2 map[string]string
   chatlog map[string][]string
   log []string
   Networks map[string]Networkstore
+	cookie http.Cookie
+	server http.Server
+	servererror error
 
 }
 
@@ -22,20 +27,38 @@ type person struct{
 type friend struct{
   name string
   Network string
-  IP ip
+  IP string
   status uint32 // 0 done, 1 sending, 2 recieving, 3 blocked, 4 ignored 5 invalid
   keypriv mod
   keycom key
+	unread bool
 }
 
 
 func NewPerson() person  {
   friends:=make(map[string]friend)
-  iptofriend:=make(map[string]map[ip]string)
+  iptofriend:=make(map[string]map[string]string)
+	iptofriend2:=make(map[string]string)
   chatlog:=make(map[string][]string)
   var log []string
   Networks:=make(map[string]Networkstore)
-  return person{friends,iptofriend,chatlog,log,Networks}
+	value:=Random_Int(256)
+	valuestr:=(&value).String()
+	cookie := http.Cookie{
+					Name:   "validate",
+					Value:  valuestr,
+	        Path: "/",
+			}
+	server:=http.Server{Addr:":8080",Handler:nil}
+  out:=person{friends:friends,
+		iptofriend:iptofriend,
+		iptofriend2:iptofriend2,
+		chatlog:chatlog,log:log,
+		Networks:Networks,
+		cookie:cookie,
+		server:server,
+		servererror:nil}
+	return out
 }
 
 
@@ -45,6 +68,9 @@ func (P person)Log(m string)  {
 
 func (P person)Chat_log(name string, sender string, message string)  {
   P.chatlog[name]=append(P.chatlog[name],"["+sender+"]:"+message)
+	temp:=P.friends[name]
+	temp.unread=false
+	P.friends[name]=temp
 }
 
 func (P person)chat(ident string, M string)  {
@@ -84,41 +110,59 @@ func (P person)Add_Network(ident string,joiner func()Networkstore )  {
   } else {
     N:=joiner()
     P.Networks[ident]=N
-    P.iptofriend[ident]=make(map[ip]string)
+    P.iptofriend[ident]=make(map[string]string)
   }
+}
+
+type MyError struct {
+	What string
+}
+
+func (e *MyError) Error() string {
+	return (*e).What
+}
+
+func (P person)rename_friend(old string, new string) error {
+	var validnames = regexp.MustCompile("^([a-zA-Z0-9:]+)$")
+	valid:=validnames.MatchString(new)
+	if valid {
+		F,knowno:=P.friends[old]
+	  if knowno {
+	    _,knownn:=P.friends[new]
+	    if !knownn {
+	      F.name=new
+	      P.friends[new]=F
+	      P.iptofriend[F.Network][F.IP]=new
+				P.iptofriend2[F.IP]=new
+	      P.chatlog[new]=P.chatlog[old]
+	      P.Chat_log(new,"system","renamed "+ old + " to " +new)
+	      delete(P.chatlog,old)
+	      delete(P.friends,old)
+				return nil
+	    } else {
+	      P.Log("name to rename to already exist: "+  new)
+				return &MyError{"name to rename to already exist: "+  new}
+	    }
+	  } else {
+	    P.Log("name to rename does not exist: "+  old)
+			return &MyError{"name to rename does not exist: "+  old}
+	  }
+	} else {
+		P.Log("rename has invalid format: "+  new)
+		return &MyError{"rename has invalid format: "+  new}
+	}
+
 }
 
 
 
-func (P person)rename_friend(old string, new string)  {
-  F,knowno:=P.friends[old]
-  if knowno {
-    _,knownn:=P.friends[new]
-    if !knownn {
-      F.name=new
-      P.friends[new]=F
-      P.iptofriend[F.Network][F.IP]=new
-      P.chatlog[new]=P.chatlog[old]
-      P.Chat_log(new,"system","renamed "+ old + " to " +new)
-      delete(P.chatlog,old)
-      delete(P.friends,old)
-    } else {
-      P.Log("name to rename to already exist: "+  new)
-    }
-  } else {
-    P.Log("name to rename does not exist: "+  old)
-  }
-}
-
-
-
-func (P person)send_friendrequest(network string, IP ip, name string,options interface{})  {
+func (P person)send_friendrequest(network string, IP string, name string,options interface{}) {
   _,known:=P.friends[name]
   if !known {
     namecolision,knownadr:=P.iptofriend[network][IP]
     if !knownadr {
       priv,pub:=New_pair(options)
-      P.friends[name]=friend{name,network,IP,1,priv,AES256key{[8]uint32{0,0,0,0,0,0,0,0}}}
+      P.friends[name]=friend{name,network,IP,1,priv,AES256key{[8]uint32{0,0,0,0,0,0,0,0}},false}
       P.iptofriend[network][IP]=name
       P.Chat_log(name,"system","sending friendrequest")
       P.msg(name,Message(pub))
@@ -139,22 +183,18 @@ func (P person)recieve()  {
     for sender,Msgl := range Msgs {
       name,known:=P.iptofriend[net][sender]
       if !known {
-        namenew:=net
-        for i := 0; i < 16; i++ {
-          namenew=namenew+strconv.Itoa(int(sender.value[i]))
-        }
+        namenew:=net+sender
         switch m0:=Msgl[0].(type) {
         case keymessage:
           priv,pub:=m0.pubkey.clone()
           comm:=priv.merge_with_public(m0.pubkey)
-          // fmt.Println(comm)
-          P.friends[namenew]=friend{namenew,net,sender,2,priv,comm}
+          P.friends[namenew]=friend{namenew,net,sender,2,priv,comm,true}
           P.iptofriend[net][sender]=namenew
           P.msg(namenew,Message(pub))
           P.Chat_log(namenew,"system","comonkey established from frendrequest")
         case textmessage:
           priv,pub:=New_pair(0)
-          P.friends[namenew]=friend{namenew,net,sender,5,priv,AES256key{[8]uint32{0,0,0,0,0,0,0,0}}}
+          P.friends[namenew]=friend{namenew,net,sender,5,priv,AES256key{[8]uint32{0,0,0,0,0,0,0,0}},true}
           P.iptofriend[net][sender]=namenew
           P.Chat_log(namenew,"system","recieving unencrpted message:")
           P.Chat_log(namenew,namenew,m0.to_string())
@@ -167,7 +207,7 @@ func (P person)recieve()  {
         switch m0:=Msgl[0].(type) {
         case keymessage:
           f:=P.friends[name]
-          P.friends[name]=friend{f.name,f.Network,f.IP,0,f.keypriv,f.keypriv.merge_with_public(m0.pubkey)}
+          P.friends[name]=friend{f.name,f.Network,f.IP,0,f.keypriv,f.keypriv.merge_with_public(m0.pubkey),true}
           P.Chat_log(name,"system","comonkey established")
         case textmessage:
           P.Chat_log(name,"system","recieving unencrpted message:")
@@ -197,6 +237,9 @@ func (P person)show_chat(ident string, options interface{}) string  {
   _,ok:=P.friends[ident]
 	var out string
   if ok {
+		temp:=P.friends[ident]
+		temp.unread=false
+		P.friends[ident]=temp
 		switch op:=options.(type) {
 		case [2]int :
 			start:=op[0]
@@ -239,3 +282,112 @@ func (P person)show_chat(ident string, options interface{}) string  {
   }
 	return out
 }
+
+func (P person)recieve_msg(M message,sender string)  {
+	ident,known:=P.iptofriend2[sender]
+	if known {
+		known = known &&  P.friends[ident].status<=2
+	}
+	if known  {
+		fr:=P.friends[ident]
+		switch m:=M.(type) {
+	  case textmessage:
+			Mnew:=fr.keycom.decrypt(M,0)
+			P.Chat_log(ident,ident,Mnew.to_string())
+	  case keymessage:
+			if fr.status==1 {
+				fr.keycom=fr.keypriv.merge_with_public(m.pubkey)
+				fr.status=0
+				P.Log("established key with: "+ident)
+			} else {
+				P.Log("recieved another key message from"+ident)
+			}
+	  default:
+			P.Log("recieved invalid message type")
+		}
+		fr.unread=true
+		P.friends[ident]=fr
+	} else {
+		namenew:="IP"+sender
+		for {
+			_,valid:=P.friends[namenew]
+			if valid {
+				namenew+="0"
+			}	else {
+				break
+			}
+		}
+		fr:=friend{name:namenew,Network:"LAN",IP:sender,status:5,unread:true}
+		P.chatlog[namenew]=[]string{}
+		P.iptofriend2[sender]=namenew
+		P.friends[namenew]=fr
+		//P.iptofriend["LAN"][sender]=namenew
+		switch m:=M.(type) {
+	  case textmessage:
+			P.Chat_log(namenew,"system","recieving unencrpted message:")
+			P.Chat_log(namenew,namenew,m.to_string())
+	  case keymessage:
+			priv,pub:=m.pubkey.clone()
+			fr.keypriv=priv
+			fr.keycom=priv.merge_with_public(m.pubkey)
+			fr.status=2
+			P.msg(namenew, pub)
+			P.Log("established new connection with" + namenew)
+	  default:
+			P.Log("recieved invalid message type")
+		}
+		P.iptofriend2[sender]=namenew
+		P.friends[namenew]=fr
+	}
+}
+
+
+func (P person)Shutdown()  {
+	P.servererror=P.server.Close()
+}
+
+// func (P person)msg_LAN(ident string, M message)  {
+// 	fr,known:=P.friends[ident]
+// 	if known {
+// 		IP:=fr.IP
+// 		m:=M
+// 		if fr.keycom!=nil {
+// 			m=fr.keycom.encrypt(M,0)
+// 		}
+// 		switch m:=m.(type) {
+// 	  case textmessage:
+// 			req, err := http.NewRequest("POST",IP+"/recieve/text/send/", nil)
+// 			if err !=  nil {
+// 				fmt.Println(err)
+// 				P.Log("got send Error:"+err.Error())
+// 				return
+// 			}
+// 			P.Chat_log(ident,"me",m.text)
+// 			resp, err := P.client.Do(req)
+// 	    if (err != nil) && (resp != nil) {
+// 	        P.Log("conection error"+err.Error())
+// 					P.Chat_log(ident,"system","last message not delivered")
+// 	    }
+// 			defer resp.Body.Close()
+// 			fmt.Printf("StatusCode: %d\n", resp.StatusCode)
+// 	  case keymessage:
+// 			req, err := http.NewRequest("POST",IP+"/recieve/key/send/", nil)
+// 			if err !=  nil {
+// 				P.Log("got send Error:"+err.Error())
+// 				return
+// 			}
+// 			resp, err := P.client.Do(req)
+// 	    if err != nil {
+// 	        P.Log("conection error"+err.Error())
+// 					P.Chat_log(ident,"system","last message not delivered")
+// 	    }
+// 			defer resp.Body.Close()
+// 			fmt.Printf("StatusCode: %d\n", resp.StatusCode)
+// 	  default:
+// 			P.Log("recieved invalid message type")
+// 			return
+// 		}
+// 	} else {
+// 		P.Log("unknown Friend :"+ ident)
+// 	}
+// }

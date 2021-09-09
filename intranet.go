@@ -1,6 +1,7 @@
 package main
 
 import(
+  "strconv"
 )
 
 // Networks provide acess to other users through LAN etc
@@ -9,9 +10,9 @@ import(
 // without identitytheft and to avoid impersination
 
 type Network interface{
-  send(ip,ip,message,password)
-  recieve(ip,password) map[ip][]message
-  leave(ip,password)
+  send(string,string,message,password)
+  recieve(string,password) map[string][]message
+  leave(string,password)
   join() Networkstore   //netpointer of the return value should always be a pointer to the network
 }
 
@@ -19,15 +20,9 @@ type Network interface{
 // stores Networks for the users
 //provides send and recieve function without requiering passowrd
 type Networkstore struct{
-  myip ip
+  myip string
   mypasswort password
   netpointer Network
-}
-
-
-
-type ip struct{
-  value [16]uint8
 }
 
 
@@ -36,11 +31,11 @@ type password struct{
 }
 
 
-func (N Networkstore)send(ipr ip,m message) {
+func (N Networkstore)send(ipr string,m message) {
   N.netpointer.send(N.myip,ipr,m,N.mypasswort)
 }
 
-func (N Networkstore)recieve() map[ip][]message {
+func (N Networkstore)recieve() map[string][]message {
   return (N.netpointer.recieve)(N.myip,N.mypasswort)
 }
 
@@ -50,29 +45,29 @@ func (N Networkstore)leave() {
 
 
 type Intranet struct{
-  msg map[ip]map[ip][]message
-  member map[ip]password
-  count uint32
+  msg map[string]map[string][]message
+  member map[string]password
+  count int
 }
 
 func NewIntranet()Intranet  {
-  msg:=make(map[ip]map[ip][]message)
-  member:=make(map[ip]password)
-  var count uint32
+  msg:=make(map[string]map[string][]message)
+  member:=make(map[string]password)
+  var count int
   return Intranet{msg,member,count}
 }
 
 
 func (I Intranet)join() Networkstore {
   I.count=I.count+1
-  newip:=ip{[16]uint8{0,0,0,0,0,0,0,0,0,0,0,0,uint8((I.count>>24)&0xFF),uint8((I.count>>16)&0xFF),uint8((I.count>>8)&0xFF),uint8(I.count&0xFF)}}
-  newpassword:=password{SHA256(string(newip.value[:]))}
+  newip:=":::::::"+strconv.Itoa(I.count)
+  newpassword:=password{SHA256(newip)}
   I.member[newip]=newpassword
   return Networkstore{newip,newpassword,&I}
 }
 
 
-func (I Intranet)send(ips ip, ipr ip, M message, P password)  {
+func (I Intranet)send(ips string, ipr string, M message, P password)  {
   Pchek,ok:=I.member[ips]
   if ok && Pchek==P {
     _,ipr_has_message:=I.msg[ipr]
@@ -84,14 +79,14 @@ func (I Intranet)send(ips ip, ipr ip, M message, P password)  {
         I.msg[ipr][ips]=[]message{M}
       }
     } else {
-      I.msg[ipr]=make(map[ip][]message)
+      I.msg[ipr]=make(map[string][]message)
       I.msg[ipr][ipr]=[]message{M}
     }
   }
 }
 
-func (I Intranet)recieve(ipr ip,P password) map[ip][]message {
-  out:=make(map[ip][]message)
+func (I Intranet)recieve(ipr string,P password) map[string][]message {
+  out:=make(map[string][]message)
   Pchek,ok:=I.member[ipr]
   if ok && Pchek==P {
     out=I.msg[ipr]
@@ -100,10 +95,35 @@ func (I Intranet)recieve(ipr ip,P password) map[ip][]message {
   return out
 }
 
-func (I Intranet)leave(ips ip, P password)  {
+func (I Intranet)leave(ips string, P password)  {
   Pchek,ok:=I.member[ips]
   if ok && Pchek==P {
     delete(I.msg,ips)
     delete(I.member,ips)
   }
+}
+
+
+
+type LAN struct{
+  connection string
+  myip string
+  in,out chan message
+}
+
+
+func (L LAN)send(ips string, ipr string, M message, P password)  {
+}
+
+func (L LAN)join() Networkstore {
+  newip:=":::::::"
+  return Networkstore{newip,password{},&L}
+}
+
+func (L LAN)leave(ips string, P password)  {
+}
+
+func (L LAN)recieve(ipr string,P password) map[string][]message {
+  out:=make(map[string][]message)
+  return out
 }

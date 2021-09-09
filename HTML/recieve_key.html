@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style></style>
+</head>
+<body>
+
+<button onclick="location.href = '/recieve/key';" id="myButton"  >refresh</button>
+<button onclick="location.href = '/main/me';" id="myButton"  >back to main</button>
+
+<h1>recieving</h1>
+
+
+<form action="/recieve/key/send" method="POST">
+<div>IP<textarea name="IP" rows="1" cols="80"></textarea></div>
+<divs>value<textarea name="value" rows="4" cols="200"></textarea></div>
+<divs>root<textarea name="Root" rows="4" cols="200"></textarea></div>
+<divs>modu<textarea name="Modu" rows="4" cols="200"></textarea></div>
+<div><input type="submit" value="send public key"></div>
+</form>
+
+</body>
+</html>

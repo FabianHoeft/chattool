@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style></style>
+</head>
+<body>
+
+<button onclick="location.href = '/chat/{{.Title}}';" id="myButton"  >refresh</button>
+<button onclick="location.href = '/main/me';" id="myButton"  >back to main</button>
+
+
+<h1>Creating new Friend</h1>
+
+
+<form action="/chat/{{.Title}}/add" method="POST">
+<div>Name<textarea name="Name" rows="1" cols="80">{{.Title}}</textarea></div>
+<div>Net<textarea name="Net" rows="1" cols="80"></textarea></div>
+<div>IP<textarea name="IP" rows="1" cols="80"></textarea></div>
+<div><input type="submit" value="add as friend"></div>
+</form>
+
+</body>
+</html>
