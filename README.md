@@ -6,15 +6,14 @@
  -Webserver based UI
  
  -End to End Encrypted Messaging
+
+ -Saving chatlogs to encrypted files on disk
  
  ToDo:
  
- -Sending messages currently works only internaly
- 
- -Saving chatlogs to encrypted files on disk
- 
+ -Sending messages via Internet works only with manually formated IP adress
+  
  Info:
- 
  
  Security of the Webinterface is maintained via cookies that are exchanged automaticly when visiting the login page. The page should launch automaticly in the default browser, but the link is also  in the console.
 

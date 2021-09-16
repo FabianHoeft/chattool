@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+
+
+
+</style>
+</head>
+<body>
+
+
+<button onclick="location.href = '/login/{{.Site}}';" id="myButton"  >refresh</button>
+
+<h1>Login</h1>
+
+
+
+
+<div>
+
+</div>
+<form  action="/login/{{.Site}}/login" method="POST">
+  <div>
+    Password:
+    <textarea name="Password" rows="1" cols="20"></textarea>
+    {{.Error}}
+  </div>
+  <div>
+    <input type="submit" value="login">
+  </div>
+</form>
+<div>
+
+</div>
+<form  action="/login/{{.Site}}/remove" method="POST">
+  <div>
+    <textarea name="Confirm" rows="1" cols="6">false</textarea>
+  </div>
+  <div>
+    <input type="submit" value="delete local account">
+  </div>
+</form>
+
+</body>
+</html>

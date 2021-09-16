@@ -11,11 +11,12 @@
 <h1>recieving</h1>
 
 
-<form action="/recieve/text/send" method="POST">
+<form action="/recieve/text" method="POST">
 <div>IP<textarea name="IP" rows="1" cols="80"></textarea></div>
 <divs>Text<textarea name="Text" rows="16" cols="200"></textarea></div>
 <div><input type="submit" value="send text"></div>
 </form>
+<div>{{.Error}}</div>
 
 </body>
 </html>
