@@ -31,7 +31,7 @@ type friend struct {
 	Network string
 	IP      string
 	status  uint32 // 0 done, 1 sending, 2 recieving, 3 blocked, 4 ignored 5 invalid
-	keypriv mod
+	keypriv publicKey
 	keycom  key
 	unread  bool
 }
@@ -143,6 +143,11 @@ func (P *person) fromFile() {
 		return
 	}
 	savestr, err := load("saves/friends.txt")
+	if err != nil {
+		P.Log(err.Error())
+		fmt.Println(err.Error())
+		return
+	}
 	key := SHA256(P.password + "key")
 	savestr = AES256(savestr, key, 1)
 	friendslice, err := read(savestr)
@@ -234,6 +239,7 @@ func (P *person) RenameFriend(old string, new string) error {
 		if knowno {
 			_, knownn := P.friends[new]
 			if !knownn {
+				fmt.Println(F)
 				F.name = new
 				P.friends[new] = F
 				P.iptofriend[F.Network][F.IP] = new
@@ -286,7 +292,12 @@ func (P *person) recieve() {
 				switch m0 := Msgl[0].(type) {
 				case keymessage:
 					priv, pub := m0.pubkey.clone()
-					comm := priv.mergewithpublic(m0.pubkey)
+					comm, err := priv.mergewithpublic(m0.pubkey)
+					if err != nil {
+						fmt.Println(err)
+						P.ChatLog(namenew, "system", "recieved key of invalid type")
+						continue
+					}
 					P.friends[namenew] = friend{namenew, net, sender, 2, priv, comm, true}
 					P.iptofriend[net][sender] = namenew
 					P.msg(namenew, newMessage(pub))
@@ -306,7 +317,12 @@ func (P *person) recieve() {
 				switch m0 := Msgl[0].(type) {
 				case keymessage:
 					f := P.friends[name]
-					P.friends[name] = friend{f.name, f.Network, f.IP, 0, f.keypriv, f.keypriv.mergewithpublic(m0.pubkey), true}
+					comkey, err := f.keypriv.mergewithpublic(m0.pubkey)
+					if err != nil {
+						P.ChatLog(name, "system", "recieving invalid key to merge")
+						continue
+					}
+					P.friends[name] = friend{f.name, f.Network, f.IP, 0, f.keypriv, comkey, true}
 					P.ChatLog(name, "system", "comonkey established")
 				case textmessage:
 					P.ChatLog(name, "system", "recieving unencrpted message:")
@@ -401,11 +417,16 @@ func (P *person) RecieveMsg(M message, sender string) {
 			}
 		case keymessage:
 			if fr.status == 1 {
-				fr.keycom = fr.keypriv.mergewithpublic(m.pubkey)
+				comkey, err := fr.keypriv.mergewithpublic(m.pubkey)
+				if err != nil {
+					P.ChatLog(ident, "system", "recieving unmatching key type ")
+					return
+				}
+				fr.keycom = comkey
 				fr.status = 0
-				P.Log("established key with: " + ident)
+				P.ChatLog(ident, "system", "established key ")
 			} else {
-				P.Log("recieved another key message from" + ident)
+				P.ChatLog(ident, "system", "recieved another key message")
 			}
 		default:
 			P.Log("recieved invalid message type")
@@ -435,7 +456,12 @@ func (P *person) RecieveMsg(M message, sender string) {
 		case keymessage:
 			priv, pub := m.pubkey.clone()
 			fr.keypriv = priv
-			fr.keycom = priv.mergewithpublic(m.pubkey)
+			comkey, err := fr.keypriv.mergewithpublic(m.pubkey)
+			if err != nil {
+				P.ChatLog(ident, "system", "recieving unmatching key type ")
+				return
+			}
+			fr.keycom = comkey
 			fr.status = 2
 			P.msg(namenew, pub)
 			P.Log("established new connection with" + namenew)
@@ -456,21 +482,37 @@ func (P *person) MsgLAN(ident string, M message) {
 			fr.keycom.encrypt(m, 0)
 		}
 		form := url.Values{}
+		form.Add("IP", ":8080")
 		switch m := m.(type) {
 		case textmessage:
 			m.toString()
-			form.Add("IP", ":8080")
 			form.Add("Text", m.toString())
 		case keymessage:
-			form.Add("IP", ":8080")
-			form.Add("Value", m.pubkey.value.Text(0))
-			form.Add("Root", m.pubkey.root.Text(0))
-			form.Add("Modu", m.pubkey.mod.Text(0))
+			switch key := m.pubkey.(type) {
+			case mod:
+				form.Add("Value", key.value.Text(0))
+				form.Add("Root", key.root.Text(0))
+				form.Add("Modu", key.mod.Text(0))
+			case ECCkey:
+				point := key.value.(n2)
+				form.Add("X", (&point).x.Text(0))
+				form.Add("Y", (&point).y.Text(0))
+				form.Add("A", key.curve.a.Text(0))
+				form.Add("B", key.curve.b.Text(0))
+				form.Add("K", key.curve.k.Text(0))
+				form.Add("RootX", key.curve.root.x.Text(0))
+				form.Add("RootY", key.curve.root.y.Text(0))
+			}
 		default:
-			form.Add("IP", "hi")
 			P.Log("sending invalid message type")
 		}
-		req, err := http.NewRequest("POST", fr.IP+":8080", strings.NewReader(form.Encode()))
+		urlf, err := url.Parse(fr.IP)
+		if err != nil {
+			fmt.Println("\n", err.Error())
+			P.Log(err.Error())
+			return
+		}
+		req, err := http.NewRequest("POST", urlf.String(), strings.NewReader(form.Encode()))
 		if err != nil {
 			fmt.Println("\n", err.Error())
 			P.Log(err.Error())

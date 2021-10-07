@@ -45,7 +45,6 @@ func main() {
 		resp, err := hc.Do(req)
 		defer resp.Body.Close()
 	}()
-
 	newserver(&A)
 
 	// A.Add_Network("LAN",LAN.join)

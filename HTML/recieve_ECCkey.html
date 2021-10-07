@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style></style>
+</head>
+<body>
+
+<button onclick="location.href = '/recieve/key';" id="myButton"  >refresh</button>
+<button onclick="location.href = '/main/me';" id="myButton"  >back to main</button>
+
+<h1>recieving</h1>
+
+
+<form action="/recieve/ECCkey" method="POST">
+<div>IP<textarea name="IP" rows="1" cols="80"></textarea></div>
+<divs>a<textarea name="A" rows="4" cols="200"></textareSa></div>
+<divs>b<textarea name="B" rows="4" cols="200"></textarea></div>
+<divs>k<textarea name="K" rows="4" cols="200"></textarea></div>
+<divs>rootx<textarea name="RootX" rows="4" cols="200"></textarea></div>
+<divs>rootY<textarea name="RootY" rows="4" cols="200"></textarea></div>
+<divs>x<textarea name="X" rows="4" cols="200"></textarea></div>
+<divs>y<textarea name="Y" rows="4" cols="200"></textarea></div>
+<div><input type="submit" value="send public key"></div>
+</form>
+<div>{{.Error}}</div>
+
+</body>
+</html>

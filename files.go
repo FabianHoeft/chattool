@@ -457,12 +457,12 @@ func read(input string) (out interface{}, err error) {
 		return temp, 0, en, nil
 	}
 
-	recover := func() {
+	recoverfunc := func() {
 		if r := recover(); r != nil {
 			out, err = 0, &MyError{fmt.Sprint(r)}
 		}
 	}
-	defer recover()
+	defer recoverfunc()
 	out, _, _, err = trace(input)
 	return out, err
 }

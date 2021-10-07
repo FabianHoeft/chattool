@@ -19,10 +19,10 @@ func newMessage(M interface{}) message {
 		length int
 	}:
 		out = textmessage{m.length, m.m, false}
-	case mod:
-		out = keymessage{m}
 	case message:
 		out = m
+	case publicKey:
+		out = keymessage{m}
 	}
 	return out
 }
@@ -49,7 +49,7 @@ func (T textmessage) toString() string {
 }
 
 type keymessage struct {
-	pubkey mod
+	pubkey publicKey
 }
 
 func (T keymessage) validate() bool {

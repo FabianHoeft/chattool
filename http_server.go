@@ -20,7 +20,8 @@ func getIP(r *http.Request) string {
 		IPstr = r.RemoteAddr
 	}
 	m := regex.FindStringSubmatch(IPstr)
-	return m[1]
+	_ = m
+	return IPstr
 }
 
 type chat struct {
@@ -237,11 +238,32 @@ func recieveHandler(w http.ResponseWriter, r *http.Request, title string, P *per
 			_, err1 := (&root).SetString(r.FormValue("Root"), 0)
 			_, err2 := (&modu).SetString(r.FormValue("Modu"), 0)
 			if err0 && err1 && err2 {
-				(*P).Log("keyconversion error")
 				pubkey := mod{value, modu, root}
 				(*P).RecieveMsg(newMessage(pubkey), IP)
+				renderTemplate(w, "recieve_key", struct{ Error string }{Error: "send success"})
+				return
 			}
-			renderTemplate(w, "recieve_key", struct{ Error string }{Error: "send success"})
+			(*P).Log("keyconversion error")
+			renderTemplate(w, "recieve_key", struct{ Error string }{Error: "try again"})
+		case "ECCkey":
+			var a, b, k, rootx, rooty, x, y big.Int
+			IP := getIP(r)
+			// IP := r.FormValue("IP")
+			_, err0 := (&a).SetString(r.FormValue("A"), 0)
+			_, err1 := (&b).SetString(r.FormValue("B"), 0)
+			_, err2 := (&x).SetString(r.FormValue("X"), 0)
+			_, err3 := (&y).SetString(r.FormValue("Y"), 0)
+			_, err4 := (&k).SetString(r.FormValue("K"), 0)
+			_, err5 := (&rootx).SetString(r.FormValue("RootX"), 0)
+			_, err6 := (&rooty).SetString(r.FormValue("RootY"), 0)
+			if err0 && err1 && err2 && err3 && err4 && err5 && err6 {
+				(*P).Log("keyconversion error")
+				pubkey := ECCkey{value: n2{x: x, y: y}, curve: elipticcurve{a: a, b: b, k: k, root: n2{x: rootx, y: rooty}}}
+				(*P).RecieveMsg(newMessage(pubkey), IP)
+				renderTemplate(w, "recieve_ECCkey", struct{ Error string }{Error: "send success"})
+				return
+			}
+			renderTemplate(w, "recieve_key", struct{ Error string }{Error: "try again"})
 		case "text":
 			IP := getIP(r)
 			// IP := r.FormValue("IP")
@@ -303,7 +325,7 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string, *person), P
 }
 
 var templates = template.Must(template.ParseFiles("HTML/addfriend.html",
-	"HTML/chat.html", "HTML/main.html", "HTML/recieve_key.html", "HTML/recieve_text.html",
+	"HTML/chat.html", "HTML/main.html", "HTML/recieve_key.html", "HTML/recieve_ECCkey.html", "HTML/recieve_text.html",
 	"HTML/log.html", "HTML/login.html", "HTML/register.html"))
 var validPath = regexp.MustCompile("^/(chat|main|recieve|login)/([a-zA-Z0-9/:]+)$")
 

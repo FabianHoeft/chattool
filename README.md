@@ -7,6 +7,8 @@
  
  -End to End Encrypted Messaging
 
+ -support for keyexchange via normal and Elliptic-curve Diffie–Hellman
+
  -Saving chatlogs to encrypted files on disk
  
  ToDo:
